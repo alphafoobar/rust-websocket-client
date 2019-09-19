@@ -1,0 +1,11 @@
+[package]
+name = "websocket-client"
+version = "0.1.0"
+authors = ["james <alphafoobar@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+websocket = "0.23.0"
+serde = "1.0.101"
+chrono = "0.4.9"
+openssl = "0.10.24"
