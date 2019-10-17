@@ -1,5 +1,6 @@
 use std::env;
 use std::str;
+use std::string::String;
 
 use chrono::{DateTime, Utc};
 use serde_json::Value;
@@ -16,6 +17,8 @@ fn main() {
 //                .connect_secure(None)
                 .unwrap();
 
+
+            let mut previous = Utc::now();
             let mut counter: u128 = 0;
             for message in client.incoming_messages() {
                 // Skip some messages.
@@ -28,11 +31,14 @@ fn main() {
                 } else {
                     let rate = v["rate"].as_str();
                     let time = v["timestamp"].as_str();
-                    if rate.is_some() && time.is_some() {
+                    let constituents = v["constituents"].as_array();
+                    if rate.is_some() && time.is_some() && constituents.is_some() {
                         let result = DateTime::parse_from_rfc3339(time.unwrap());
                         let now = Utc::now();
                         let lag = ((now.timestamp_nanos() - result.unwrap().timestamp_nanos()) as f64) / 1000000.0;
-                        println!("{:?}: [{}] -> rate={}, time={}, lag={}", now, counter, rate.unwrap(), time.unwrap(), lag);
+                        let delay = ((now.timestamp_nanos() - previous.timestamp_nanos()) as f64) / 1000000.0;
+                        println!("{:?}: [{}] -> rate={}, inputs={:?}, lag={}, delay={}", now, counter, rate.unwrap(), map(constituents.unwrap().to_vec()), lag, delay);
+                        previous = now;
                     }
                 }
                 counter = counter + 1;
@@ -40,4 +46,13 @@ fn main() {
         }
         Err(error) => println!("Must define variable \"{}\": {}", key, error),
     }
+}
+
+fn map(vs: Vec<Value>) -> [String; 3] {
+    let mut xs: [String; 3] = ["".to_string(), "".to_string(), "".to_string()];
+    for i in 0..3 {
+        let v = vs[i].as_object().unwrap().get("midPrice").unwrap().as_str().unwrap();
+        xs[i] = v.to_string();
+    }
+    return xs;
 }
