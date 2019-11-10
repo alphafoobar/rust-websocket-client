@@ -2,10 +2,10 @@ use std::env;
 use std::str;
 use std::string::String;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use serde_json::Value;
-use websocket::ClientBuilder;
 use websocket::ws::dataframe::DataFrame;
+use websocket::ClientBuilder;
 
 fn main() {
     let key = "WEBSOCKET_ADDRESS";
@@ -14,9 +14,8 @@ fn main() {
             let mut client = ClientBuilder::new(address.as_str())
                 .unwrap()
                 .connect_insecure()
-//                .connect_secure(None)
+                //                .connect_secure(None)
                 .unwrap();
-
 
             let mut previous = Utc::now();
             let mut counter: u128 = 0;
@@ -35,9 +34,24 @@ fn main() {
                     if rate.is_some() && time.is_some() && constituents.is_some() {
                         let result = DateTime::parse_from_rfc3339(time.unwrap());
                         let now = Utc::now();
-                        let lag = ((now.timestamp_nanos() - result.unwrap().timestamp_nanos()) as f64) / 1000000.0;
-                        let delay = ((now.timestamp_nanos() - previous.timestamp_nanos()) as f64) / 1000000.0;
-                        println!("{:?}: [{}] -> rate={}, inputs={:?}, lag={}, delay={}", now, counter, rate.unwrap(), map(constituents.unwrap().to_vec()), lag, delay);
+                        let now_nanos = now.timestamp_nanos();
+                        let lag =
+                            ((now_nanos - result.unwrap().timestamp_nanos()) as f64) / 1000000.0;
+                        let delay = ((now_nanos - previous.timestamp_nanos()) as f64) / 1000000.0;
+                        let prop_delay = ((now_nanos
+                            - propagation_delay(constituents.unwrap().to_vec()).timestamp_nanos())
+                            as f64)
+                            / 1000000.0;
+                        println!(
+                            "{:?}: [{}] -> rate={}, inputs={:?}, propagation-delay={}, lag={}, delay={}",
+                            now,
+                            counter,
+                            rate.unwrap(),
+                            map(constituents.unwrap().to_vec()),
+                            prop_delay,
+                            lag,
+                            delay
+                        );
                         previous = now;
                     }
                 }
@@ -51,8 +65,35 @@ fn main() {
 fn map(vs: Vec<Value>) -> [String; 3] {
     let mut xs: [String; 3] = ["".to_string(), "".to_string(), "".to_string()];
     for i in 0..3 {
-        let v = vs[i].as_object().unwrap().get("midPrice").unwrap().as_str().unwrap();
+        let v = vs[i]
+            .as_object()
+            .unwrap()
+            .get("midPrice")
+            .unwrap()
+            .as_str()
+            .unwrap();
         xs[i] = v.to_string();
     }
     return xs;
+}
+
+fn propagation_delay(vs: Vec<Value>) -> DateTime<Utc> {
+    let mut latest: DateTime<Utc> = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 0, 0);
+    for i in 0..3 {
+        let ts = DateTime::parse_from_rfc3339(
+            vs[i]
+                .as_object()
+                .unwrap()
+                .get("lastUpdatedTimestamp")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap()
+        .with_timezone(&Utc);
+        if ts.gt(&latest) {
+            latest = ts;
+        }
+    }
+    return latest;
 }
