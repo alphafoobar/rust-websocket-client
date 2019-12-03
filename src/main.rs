@@ -4,8 +4,8 @@ use std::string::String;
 
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::Value;
-use websocket::ws::dataframe::DataFrame;
 use websocket::ClientBuilder;
+use websocket::ws::dataframe::DataFrame;
 
 fn main() {
     let key = "WEBSOCKET_ADDRESS";
@@ -42,11 +42,13 @@ fn main() {
                             - propagation_delay(constituents.unwrap().to_vec()).timestamp_nanos())
                             as f64)
                             / 1000000.0;
+                        let algo = algorithm_name(constituents.unwrap().to_vec());
                         println!(
-                            "{:?}: [{}] -> rate={}, inputs={:?}, propagation-delay={}, lag={}, delay={}",
+                            "{:?}: [{}] -> rate={}, algo=\"{}\", inputs={:?}, propagation-delay={}, lag={}, delay={}",
                             now,
                             counter,
                             rate.unwrap(),
+                            algo,
                             map(constituents.unwrap().to_vec()),
                             prop_delay,
                             lag,
@@ -77,6 +79,20 @@ fn map(vs: Vec<Value>) -> [String; 3] {
     return xs;
 }
 
+fn algorithm_name(vs: Vec<Value>) -> String {
+    for i in 0..3 {
+        let v = vs[i]
+            .as_object()
+            .unwrap()
+            .get("algorithmName")
+            .unwrap()
+            .as_str()
+            .unwrap();
+        return v.to_string();
+    }
+    return "trimmed".to_string();
+}
+
 fn propagation_delay(vs: Vec<Value>) -> DateTime<Utc> {
     let mut latest: DateTime<Utc> = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 0, 0);
     for i in 0..3 {
@@ -88,9 +104,8 @@ fn propagation_delay(vs: Vec<Value>) -> DateTime<Utc> {
                 .unwrap()
                 .as_str()
                 .unwrap(),
-        )
-        .unwrap()
-        .with_timezone(&Utc);
+        ).unwrap().with_timezone(&Utc);
+
         if ts.gt(&latest) {
             latest = ts;
         }
