@@ -1,9 +1,11 @@
 use std::env;
+use std::net::TcpStream;
 use std::str;
 use std::string::String;
 
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::Value;
+use websocket::client::sync::Client;
 use websocket::ClientBuilder;
 use websocket::ws::dataframe::DataFrame;
 
@@ -11,14 +13,12 @@ fn main() {
     let key = "WEBSOCKET_ADDRESS";
     match env::var(key) {
         Ok(address) => {
-            let mut client = ClientBuilder::new(address.as_str())
-                .unwrap()
-                .connect_insecure()
-                //                .connect_secure(None)
-                .unwrap();
+            let address = address.as_str();
+            let mut client = ClientBuilder::new(address).unwrap().connect(None).unwrap();
 
             let mut previous = Utc::now();
             let mut counter: u128 = 0;
+            println!("{:?}: Connected", Utc::now());
             for message in client.incoming_messages() {
                 // Skip some messages.
                 let text = message.unwrap().take_payload();
@@ -44,8 +44,9 @@ fn main() {
                             / 1000000.0;
                         let algo = algorithm_name(constituents.unwrap().to_vec());
                         println!(
-                            "{:?}: [{}] -> rate={}, algo=\"{}\", inputs={:?}, propagation-delay={}, lag={}, delay={}",
+                            "{:?}:{:?} [{}] -> rate={}, algo=\"{}\", inputs={:?}, propagation-delay={}, lag={}, delay={}",
                             now,
+                            result.unwrap(),
                             counter,
                             rate.unwrap(),
                             algo,
@@ -81,14 +82,18 @@ fn map(vs: Vec<Value>) -> [String; 3] {
 
 fn algorithm_name(vs: Vec<Value>) -> String {
     for i in 0..3 {
-        let v = vs[i]
+        let option = vs[i]
             .as_object()
             .unwrap()
-            .get("algorithmName")
-            .unwrap()
-            .as_str()
-            .unwrap();
-        return v.to_string();
+            .get("algorithmName");
+
+        if option.is_some() {
+            return option
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string();
+        }
     }
     return "trimmed".to_string();
 }
