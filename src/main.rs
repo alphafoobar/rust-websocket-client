@@ -28,11 +28,12 @@ fn main() {
                 if event_type.is_some() && event_type.unwrap().eq("DISCONNECT") {
                     println!("{:?}: [{}] -> DISCONNECT {}", Utc::now(), counter, s);
                 } else {
+                    let index_name = v["indexName"].as_str();
                     let rate = v["rate"].as_str();
                     let time = v["timestamp"].as_str();
                     let constituents = v["constituents"].as_array();
 
-                    if rate.is_some() && time.is_some() && constituents.is_some() {
+                    if index_name.is_some() && rate.is_some() && time.is_some() && constituents.is_some() {
                         let result = DateTime::parse_from_rfc3339(time.unwrap());
                         let now = Utc::now();
                         let now_nanos = now.timestamp_nanos();
@@ -45,10 +46,11 @@ fn main() {
                             / 1000000.0;
                         let algo = algorithm_name(constituents.unwrap().to_vec());
                         println!(
-                            "{:?}:{:?} [{}] -> rate={}, algo=\"{}\", inputs={:?}, propagation-delay={}, lag={}, delay={}",
+                            "{:?}:{:?} [{}] -> name={}, rate={}, algo=\"{}\", inputs={:?}, propagation-delay={}, lag={}, delay={}",
                             now,
                             result.unwrap(),
                             counter,
+                            index_name.unwrap(),
                             rate.unwrap(),
                             algo,
                             map(constituents.unwrap().to_vec()),
