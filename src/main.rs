@@ -34,6 +34,7 @@ fn main() {
                     let constituents = v["constituents"].as_array();
 
                     if index_name.is_some() && rate.is_some() && time.is_some() && constituents.is_some() {
+                        let index_name_string = index_name.unwrap();
                         let result = DateTime::parse_from_rfc3339(time.unwrap());
                         let now = Utc::now();
                         let now_nanos = now.timestamp_nanos();
@@ -50,7 +51,7 @@ fn main() {
                             now,
                             result.unwrap(),
                             counter,
-                            index_name.unwrap(),
+                            index_name_string,
                             rate.unwrap(),
                             algo,
                             map(constituents.unwrap().to_vec()),
@@ -59,9 +60,10 @@ fn main() {
                             delay
                         );
                         previous = now;
+
+                        counter = counter + 1;
                     }
                 }
-                counter = counter + 1;
             }
         }
         Err(error) => println!("Must define variable \"{}\": {}", key, error),
