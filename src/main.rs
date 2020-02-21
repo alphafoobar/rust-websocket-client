@@ -1,19 +1,20 @@
 use std::env;
-use std::net::TcpStream;
 use std::str;
 use std::string::String;
 
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::Value;
-use websocket::client::sync::Client;
-use websocket::ClientBuilder;
 use websocket::ws::dataframe::DataFrame;
+use websocket::ClientBuilder;
 
 fn main() {
     let key = "WEBSOCKET_ADDRESS";
     match env::var(key) {
         Ok(address) => {
-            let mut client = ClientBuilder::new(address.as_str()).unwrap().connect(None).unwrap();
+            let mut client = ClientBuilder::new(address.as_str())
+                .unwrap()
+                .connect(None)
+                .unwrap();
             let mut previous = Utc::now();
             let mut counter: u128 = 0;
             println!("{:?}: Connected", Utc::now());
@@ -33,7 +34,11 @@ fn main() {
                     let time = v["timestamp"].as_str();
                     let constituents = v["constituents"].as_array();
 
-                    if index_name.is_some() && rate.is_some() && time.is_some() && constituents.is_some() {
+                    if index_name.is_some()
+                        && rate.is_some()
+                        && time.is_some()
+                        && constituents.is_some()
+                    {
                         let index_name_string = index_name.unwrap();
                         let result = DateTime::parse_from_rfc3339(time.unwrap());
                         let now = Utc::now();
@@ -73,7 +78,8 @@ fn main() {
 fn map(vs: Vec<Value>) -> Vec<String> {
     let mut xs = Vec::new();
     for i in vs.iter() {
-        let v = i.as_object()
+        let v = i
+            .as_object()
             .unwrap()
             .get("midPrice")
             .unwrap()
@@ -86,16 +92,10 @@ fn map(vs: Vec<Value>) -> Vec<String> {
 
 fn algorithm_name(vs: Vec<Value>) -> String {
     for i in vs.iter() {
-        let option = i.as_object()
-            .unwrap()
-            .get("algorithmName");
+        let option = i.as_object().unwrap().get("algorithmName");
 
         if option.is_some() {
-            return option
-                .unwrap()
-                .as_str()
-                .unwrap()
-                .to_string();
+            return option.unwrap().as_str().unwrap().to_string();
         }
     }
     return "trimmed".to_string();
@@ -104,13 +104,16 @@ fn algorithm_name(vs: Vec<Value>) -> String {
 fn propagation_delay(vs: Vec<Value>) -> DateTime<Utc> {
     let mut latest: DateTime<Utc> = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 0, 0);
     for i in vs.iter() {
-        let ts = DateTime::parse_from_rfc3339(i.as_object()
-                                                  .unwrap()
-                                                  .get("lastUpdatedTimestamp")
-                                                  .unwrap()
-                                                  .as_str()
-                                                  .unwrap(),
-        ).unwrap().with_timezone(&Utc);
+        let ts = DateTime::parse_from_rfc3339(
+            i.as_object()
+                .unwrap()
+                .get("lastUpdatedTimestamp")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap()
+        .with_timezone(&Utc);
 
         if ts.gt(&latest) {
             latest = ts;
