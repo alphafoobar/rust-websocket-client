@@ -1,3 +1,5 @@
+mod date_helper;
+
 use std::env;
 use std::str;
 use std::string::String;
@@ -104,20 +106,35 @@ fn algorithm_name(vs: Vec<Value>) -> String {
 fn propagation_delay(vs: Vec<Value>) -> DateTime<Utc> {
     let mut latest: DateTime<Utc> = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 0, 0);
     for i in vs.iter() {
-        let ts = DateTime::parse_from_rfc3339(
+        let ts = date_helper::parse_datetime(
             i.as_object()
                 .unwrap()
                 .get("lastUpdatedTimestamp")
                 .unwrap()
                 .as_str()
                 .unwrap(),
-        )
-        .unwrap()
-        .with_timezone(&Utc);
+        );
 
         if ts.gt(&latest) {
             latest = ts;
         }
     }
     return latest;
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    mod fs_helper;
+
+    #[test]
+    fn test_propagation_delay() {
+        let string = fs_helper::read_file_from_relative_path("resources/test/constituents.json");
+        let expected = date_helper::parse_datetime("2020-03-12T03:37:13.646613Z");
+        let vec = serde_json::from_str(string.as_str()).unwrap();
+
+        assert_eq!(propagation_delay(vec), expected);
+    }
 }
