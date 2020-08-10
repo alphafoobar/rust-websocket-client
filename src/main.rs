@@ -27,6 +27,7 @@ fn main() {
                 let s = str::from_utf8(&text.as_slice()).unwrap();
                 let v: Value = serde_json::from_str(&s).unwrap();
                 let event_type = v["event"].as_str();
+                let service_name = v["service"].as_str();
 
                 if event_type.is_some() && event_type.unwrap().eq("DISCONNECT") {
                     println!("{:?}: [{}] -> DISCONNECT {}", Utc::now(), counter, s);
@@ -39,36 +40,62 @@ fn main() {
                     if index_name.is_some()
                         && rate.is_some()
                         && time.is_some()
-                        && constituents.is_some()
                     {
-                        let index_name_string = index_name.unwrap();
-                        let result = DateTime::parse_from_rfc3339(time.unwrap());
-                        let now = Utc::now();
-                        let now_nanos = now.timestamp_nanos();
-                        let lag =
-                            ((now_nanos - result.unwrap().timestamp_nanos()) as f64) / 1000000.0;
-                        let delay = ((now_nanos - previous.timestamp_nanos()) as f64) / 1000000.0;
-                        let prop_delay = ((now_nanos
-                            - propagation_delay(constituents.unwrap().to_vec()).timestamp_nanos())
-                            as f64)
-                            / 1000000.0;
-                        let algo = algorithm_name(constituents.unwrap().to_vec());
-                        println!(
-                            "{:?}:{:?} [{}] -> name={}, rate={}, algo=\"{}\", inputs={:?}, propagation-delay={}, lag={}, delay={}",
-                            now,
-                            result.unwrap(),
-                            counter,
-                            index_name_string,
-                            rate.unwrap(),
-                            algo,
-                            map(constituents.unwrap().to_vec()),
-                            prop_delay,
-                            lag,
-                            delay
-                        );
-                        previous = now;
+                        if constituents.is_some()
+                        {
+                            let index_name_string = index_name.unwrap();
+                            let result = DateTime::parse_from_rfc3339(time.unwrap());
+                            let now = Utc::now();
+                            let now_nanos = now.timestamp_nanos();
+                            let lag =
+                                ((now_nanos - result.unwrap().timestamp_nanos()) as f64) / 1000000.0;
+                            let delay = ((now_nanos - previous.timestamp_nanos()) as f64) / 1000000.0;
+                            let prop_delay = ((now_nanos
+                                - propagation_delay(constituents.unwrap().to_vec()).timestamp_nanos())
+                                as f64)
+                                / 1000000.0;
+                            let algo = algorithm_name(constituents.unwrap().to_vec());
+                            println!(
+                                "[{}] {:?}:{:?} [{}] -> name={}, rate={}, algo=\"{}\", inputs={:?}, propagation-delay={}, lag={}, delay={}",
+                                service_name.unwrap(),
+                                now,
+                                result.unwrap(),
+                                counter,
+                                index_name_string,
+                                rate.unwrap(),
+                                algo,
+                                map(constituents.unwrap().to_vec()),
+                                prop_delay,
+                                lag,
+                                delay
+                            );
+                            previous = now;
 
-                        counter = counter + 1;
+                            counter = counter + 1;
+                        } else {
+                            let index_name_string = index_name.unwrap();
+                            let result = DateTime::parse_from_rfc3339(time.unwrap());
+                            let now = Utc::now();
+                            let now_nanos = now.timestamp_nanos();
+                            let lag =
+                                ((now_nanos - result.unwrap().timestamp_nanos()) as f64) / 1000000.0;
+                            let delay = ((now_nanos - previous.timestamp_nanos()) as f64) / 1000000.0;
+
+                            println!(
+                                "[{}] {:?}:{:?} [{}] -> name={}, rate={}, lag={}, delay={}",
+                                service_name.unwrap(),
+                                now,
+                                result.unwrap(),
+                                counter,
+                                index_name_string,
+                                rate.unwrap(),
+                                lag,
+                                delay
+                            );
+                            previous = now;
+
+                            counter = counter + 1;
+                        }
                     }
                 }
             }
