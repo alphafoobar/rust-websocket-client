@@ -31,6 +31,8 @@ fn main() {
 
                 if event_type.is_some() && event_type.unwrap().eq("DISCONNECT") {
                     println!("{:?}: [{}] -> DISCONNECT {}", Utc::now(), counter, s);
+                } else if event_type.is_some() && event_type.unwrap().eq("WELCOME") {
+                    println!("{:?}: [{}] -> WELCOME {}", Utc::now(), counter, s);
                 } else {
                     let index_name = v["indexName"].as_str();
                     let rate = v["rate"].as_str();
@@ -57,7 +59,7 @@ fn main() {
                             let algo = algorithm_name(constituents.unwrap().to_vec());
                             println!(
                                 "[{}] {:?}:{:?} [{}] -> name={}, rate={}, algo=\"{}\", inputs={:?}, propagation-delay={}, lag={}, delay={}",
-                                service_name.unwrap(),
+                                service_name_or(service_name),
                                 now,
                                 result.unwrap(),
                                 counter,
@@ -83,7 +85,7 @@ fn main() {
 
                             println!(
                                 "[{}] {:?}:{:?} [{}] -> name={}, rate={}, lag={}, delay={}",
-                                service_name.unwrap(),
+                                service_name_or(service_name),
                                 now,
                                 result.unwrap(),
                                 counter,
@@ -102,6 +104,14 @@ fn main() {
         }
         Err(error) => println!("Must define variable \"{}\": {}", key, error),
     }
+}
+
+fn service_name_or(service_name: Option<&str>) -> &str {
+    if service_name.is_some()
+    {
+        return service_name.unwrap();
+    }
+    return "?";
 }
 
 fn map(vs: Vec<Value>) -> Vec<String> {
